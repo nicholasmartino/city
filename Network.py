@@ -6,7 +6,6 @@ from shapely.affinity import scale
 from shapely.geometry import LineString, Point
 from shapely.geometry import Point, LineString
 from shapely.ops import snap
-from sklearn.mixture import GaussianMixture
 
 pd.options.display.max_columns = 15
 pd.options.display.max_rows = 6
