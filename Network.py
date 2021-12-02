@@ -1,7 +1,6 @@
 import geopandas as gpd
 import pandas as pd
 
-from ShapeTools import Shape, azimuth
 from rtree import index
 from shapely.affinity import scale
 from shapely.geometry import LineString, Point
