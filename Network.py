@@ -1,8 +1,6 @@
-
 import geopandas as gpd
 import pandas as pd
 
-from Patterns import Isovist
 from ShapeTools import Shape, azimuth
 from rtree import index
 from shapely.affinity import scale
