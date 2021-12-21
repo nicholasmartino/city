@@ -1,9 +1,9 @@
 import sys
-from City.Zoning import Zone, Envelope, Box, Trapeze
+from Zoning import Zone, Envelope, Box, Trapeze
 
 
 if 'win32' in sys.platform:
-	directory = f'C:/Users/nichmar.stu/Google Drive/Python/urban-zoning/data'
+	directory = f'G:/My Drive/Python/urban-zoning/data'
 else:
 	directory = '/Users/nicholasmartino/Google Drive/Python/urban-zoning/data'
 

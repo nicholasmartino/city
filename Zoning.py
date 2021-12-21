@@ -12,8 +12,8 @@ import time
 
 sys.path.insert(0, "/Users/nicholasmartino/Google Drive/Python/morphology")
 from ShapeTools import Shape, Analyst, divide_line_by_count, get_point
-from City.Fabric import Blocks, Parcels, Development
-from City.Network import Streets
+from Fabric import Blocks, Parcels, Development
+from Network import Streets
 from shapely.affinity import scale
 from shapely.geometry import LineString, MultiLineString, Polygon, MultiPolygon
 from shapely.ops import nearest_points, triangulate

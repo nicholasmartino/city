@@ -5,8 +5,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pydeck as pdk
-from City.Network import Streets
-from Patterns import Skeleton
+from Network import Streets
+# from Patterns import Skeleton
 from ShapeTools import Shape, Analyst, divide_line_by_count
 from shapely import ops
 from shapely.geometry import Point, Polygon, MultiLineString
