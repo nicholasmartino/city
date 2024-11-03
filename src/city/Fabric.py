@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 import pydeck as pdk
 from city.Network import Streets
-
-import shapeutils
-from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count
+from city.shapeutils.patterns import Patterns
+from city.shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count
 from shapely import ops
 from shapely.geometry import Point, Polygon, MultiLineString
 from sklearn.preprocessing import MinMaxScaler
@@ -487,7 +486,7 @@ class Buildings:
         return gdf
 
     def skeleton(self):
-        skeletons = shapeutils.Patterns.Skeleton(gdf=self.gdf, crs=self.crs)
+        skeletons = Patterns.Skeleton(gdf=self.gdf, crs=self.crs)
         return skeletons
 
     def all(self):
