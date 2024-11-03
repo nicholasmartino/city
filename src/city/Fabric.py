@@ -5,7 +5,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pydeck as pdk
-from Network import Streets
+from city.Network import Streets
 
 import shapeutils
 from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count

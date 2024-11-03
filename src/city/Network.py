@@ -4,7 +4,7 @@ import pandas as pd
 from rtree import index
 from shapely.geometry import Point, LineString
 from shapely.ops import snap
-
+from city.Fabric import Shape
 
 class Streets:
 	def __init__(self, gdf, buildings=None, crs=26910, widths=None, trees=None, intersections=None, verbose=False):
