@@ -3,7 +3,9 @@ from setuptools import setup, find_packages
 setup(
     name='city',
     version='0.1',
-    packages=find_packages(include=['city', 'city.*']),
+    package_dir={"": "src"},
+    packages=find_packages("src"),
+    include_package_data=True,
     install_requires=[
         requirement.strip() for requirement in open('requirements.txt').readlines()
     ],
