@@ -1,13 +1,13 @@
 import pickle
 import time
-
+from tqdm import tqdm
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pydeck as pdk
 from Network import Streets
 # from Patterns import Skeleton
-from ShapeTools import Shape, Analyst, divide_line_by_count
+from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count
 from shapely import ops
 from shapely.geometry import Point, Polygon, MultiLineString
 from sklearn.preprocessing import MinMaxScaler
@@ -91,7 +91,7 @@ class Blocks:
 
         # Build envelopes from zone
         zone = self.zone
-        gdf['zone'] = zone.name
+        gdf['zone'] = zone.city
         max_height = zone.envelopes['standard'].boxes[0].height
         setback = zone.envelopes['standard'].boxes[0].front
         if setback == 0: setback = 1
@@ -409,7 +409,7 @@ class Buildings:
             gdf = gpd.GeoDataFrame(gdf, geometry='geometry', crs=to_crs)
             gdf = gdf.dissolve(by=group_by)
 
-        # For City of Vancouver open data:
+        # For Metro Vancouver Regional District open data:
         if 'topelev_m' in gdf.columns: gdf['height'] = gdf['topelev_m'] - gdf['baseelev_m']
 
         # Get polygon-specific measures
@@ -508,21 +508,29 @@ class Development:
     def __init__(self, parcel, units=None, fsr=None, net_gross=0.9, commission=0.03, hard_costs=None, soft_costs=0.15,
                  financing_rate=0.05, profit_target=0.15, occupancy_rate=0.98, operating_costs=6000, rent=None,
                  sell=60, cap_rate=0.05, max_height=None, site_coverage=None, current_units=None, crs=26910,
-                 dem_cost=0):
+                 dem_cost=0, contingency=0.1, gst=0.05):
         """
 
         :param parcel: GeoDataFrame with one row and Polygon geometry column
         :param units: DataFrame with four columns (Type, Ratio, Area, Price)
-        :param fsr: Floor Space Ratio
+        :param fsr: Floor space ratio
         :param net_gross: Net/gross area ratio
-        :param commission:
-        :param hard_costs:
-        :param soft_costs:
-        :param dccs:
-        :param financing_rate:
-        :param profit_target:
-        :param occupancy_rate:
+        :param commission: (% of total revenue)
+        :param hard_costs: ($/sqft of gross floor area)
+        :param soft_costs: (% of hard costs)
+        :param financing_rate: %
+        :param profit_target: %
+        :param occupancy_rate: (% of gross floor area)
         :param operating_costs: Operating costs per unit (utilities, management, insurance, repair, taxes)
+        :param rent:
+        :param sell: Selling price ($/sqm)
+        :param cap_rate: Capitalization rate (%)
+        :param max_height: Maximum building height (m)
+        :param site_coverage: Maximum site coverage (% of site area)
+        :param current_units:
+        :param crs: Coordinate reference system (EPSG code)
+        :param contingency: (% of total construction costs)
+        :param gst: Global sales tax (% of total costs)
         """
 
         self.site_area = parcel.to_crs(crs).area
@@ -561,6 +569,8 @@ class Development:
         self.commission = commission
         self.financing_rate = financing_rate
         self.profit_target = profit_target
+        self.gst = gst
+        self.contingency = contingency
 
         if units is not None:
             self.units = units
@@ -607,16 +617,14 @@ class Development:
     def buildable_fsr(self):
         return self.buildable_area()/self.site_area
 
-    # def get_ebit(self):
-    #     return round((self.revenue() * self.commission) + self.hc_tot() + (self.hc_tot() * self.soft_costs) + (
-    #                 self.dccs * self.total_unit_count()), 2)
-
     def get_total_costs(self):
         return self.hc_tot() + (self.soft_costs * self.hc_tot()) + (self.dcc() * self.max_gfa())
-        # round(self.get_ebit() + (self.financing_rate * ((self.hc_tot() + self.soft_costs + self.dcc() / 2)), 2)
 
     def get_net_income(self):
-        return round(((self.current_unit_count * self.occupancy) * self.rent * 12) - (self.op_costs * self.current_unit_count), 2)
+        return round(
+            ((self.current_unit_count * self.occupancy) * self.rent * 12) -
+            (self.op_costs * self.current_unit_count), 2
+        )
 
     def value_rent(self):
         return round(self.get_net_income() / self.cap_rate, 2)
@@ -624,13 +632,27 @@ class Development:
     def value_redevelop(self):
         return round(self.site_area * self.practical_fsr() * self.sell, 2)
 
-    def value_land_residual(self):
-        net_revenue = self.revenue() - (self.commission * self.revenue())
-        subtotal = self.get_total_costs()
+    def value_land_residual(self, append_data=True):
+        gross_revenue = self.revenue()
+        net_revenue = gross_revenue - (self.commission * gross_revenue)
+        total_costs = self.get_total_costs()
+        subtotal = total_costs * (1 + self.contingency)
         interim_fin = self.financing_rate * subtotal
         total = subtotal + interim_fin
+        total_tax = total * (1 + self.gst)
         profit = self.profit_target * self.revenue()
-        return round(net_revenue - total - profit, 2)
+
+        if append_data:
+            self.parcel['gross_revenue'] = gross_revenue
+            self.parcel['net_revenue'] = net_revenue
+            self.parcel['total_costs'] = total_costs
+            self.parcel['subtotal'] = subtotal
+            self.parcel['interim_fin'] = interim_fin
+            self.parcel['total'] = total
+            self.parcel['total_tax'] = total_tax
+            self.parcel['profit'] = profit
+
+        return round(net_revenue - total_tax - profit, 2)
 
     def get_n_stories_from_max_fsr(self):
         return
@@ -638,7 +660,10 @@ class Development:
     def practical_fsr(self):
         assert self.site_area is not None, AssertionError("Site area not defined")
         assert self.fsr is not None, AssertionError("FSR not defined")
-        return pd.concat([self.buildable_fsr(), pd.Series(self.fsr, index=self.buildable_fsr().index)], axis=1).min(axis=1)
+        return pd.concat([
+            self.buildable_fsr(),
+            pd.Series(self.fsr, index=self.buildable_fsr().index)
+        ], axis=1).min(axis=1)
 
     def print_params(self):
         print(self.__dict__)
@@ -762,66 +787,70 @@ class Neighbourhood:
         """
         Assign maximum floor space ratio to parcels based on the proximity to neighbourhood centers
         :param fsr_range:
+        :param max_dist:
         :return:
         """
+        start_time = time.time()
 
         fsr_range = [min(fsr_range), max(fsr_range)]
         gdf = self.parcels.gdf.to_crs(26910).copy()
 
         if len(self.centers) == 0:
-            try: self.centers = gpd.read_feather('centers.feather')
-            except: pass
+            try:
+                self.centers = gpd.read_feather('centers.feather')
+            except:
+                pass
 
-        radii = list(range(1, int(max_dist/100)))
-        for i, r in zip(radii, radii.__reversed__()):
+        roughness = 100
+        radii = list(range(1, int(max_dist/roughness)))
+        for i, r in tqdm(zip(radii, radii.__reversed__())):
             centers = self.centers.copy().to_crs(26910)
-            centers['geometry'] = centers.buffer(r * 100)
+            centers['geometry'] = centers.buffer(r * roughness)
             centers = Shape(centers).dissolve()
             gdf.loc[gdf['id'].isin(gpd.overlay(gdf, centers.loc[:, ['geometry']])['id']), 'rad'] = i
         gdf['rad'] = gdf['rad'].fillna(0)
 
-        # Calculate distances to centers
-        for i, center in enumerate(self.centers.to_crs(26910)['geometry']):
-            gdf[f'd2_{i}'] = [1/geom.distance(center) if geom.distance(center) > 0 else 1 for geom in gdf['geometry']]
-            gdf[f'inv_power_{i}'] = (1/(gdf[f'd2_{i}'] ** 2))
-            gdf[f'NegExp03_{i}'] = [np.exp(((-0.3) * dist)) for dist in gdf[f'd2_{i}']]
-            gdf[f'log_norm_{i}'] = [1/np.log(dist) for dist in gdf[f'd2_{i}']]
-
-        gdf['dist_inv'] = list(gdf.loc[:, [col for col in gdf.columns if 'd2_' in col]].min(axis=1))
-        gdf['dist_power'] = list(gdf.loc[:, [col for col in gdf.columns if 'inv_power' in col]].min(axis=1))
-
-        gdf = gdf.sort_values(by='dist_power', ascending=True)
-        gdf['dist_power_rev'] = list(gdf.sort_values(by='dist_power', ascending=False)['dist_power'])
-
-        gdf = gdf.sort_index()
-
-        gdf['dist_negexp'] = list(gdf.loc[:, [col for col in gdf.columns if 'NegExp03_' in col]].sum(axis=1))
-        gdf['dist_log'] = list(gdf.loc[:, [col for col in gdf.columns if 'log_norm_' in col]].sum(axis=1))
+        # # Calculate distances to centers
+        # for i, center in tqdm(enumerate(self.centers.to_crs(26910)['geometry'])):
+        #     gdf[f'd2_{i}'] = [1/geom.distance(center) if geom.distance(center) > 0 else 1 for geom in gdf['geometry']]
+        #     gdf[f'inv_power_{i}'] = (1/(gdf[f'd2_{i}'] ** 2))
+        #     gdf[f'NegExp03_{i}'] = [np.exp(((-0.3) * dist)) for dist in gdf[f'd2_{i}']]
+        #     gdf[f'log_norm_{i}'] = [1/np.log(dist) for dist in gdf[f'd2_{i}']]
+        #
+        # gdf['dist_inv'] = list(gdf.loc[:, [col for col in gdf.columns if 'd2_' in col]].min(axis=1))
+        # gdf['dist_power'] = list(gdf.loc[:, [col for col in gdf.columns if 'inv_power' in col]].min(axis=1))
+        #
+        # gdf = gdf.sort_values(by='dist_power', ascending=True)
+        # gdf['dist_power_rev'] = list(gdf.sort_values(by='dist_power', ascending=False)['dist_power'])
+        #
+        # gdf = gdf.sort_index()
+        #
+        # gdf['dist_negexp'] = list(gdf.loc[:, [col for col in gdf.columns if 'NegExp03_' in col]].sum(axis=1))
+        # gdf['dist_log'] = list(gdf.loc[:, [col for col in gdf.columns if 'log_norm_' in col]].sum(axis=1))
+        #
+        # fsr_cols = ['dist_inv', 'dist_power', 'dist_power_rev', 'dist_negexp', 'dist_log', 'rad']
 
         # Normalize data according to fsr range
         scaler = MinMaxScaler(fsr_range)
         scaler01 = MinMaxScaler()
 
-        fsr_cols = ['dist_inv', 'dist_power', 'dist_power_rev', 'dist_negexp', 'dist_log', 'rad']
+        # for col in fsr_cols:
+        #     for l in range(1, 6):
+        #         if l > 1:
+        #             low_qtl = gdf[col].quantile(1 / l)
+        #             up_qtl = gdf[col].quantile(1 / (l - 1))
+        #             gdf.loc[
+        #                 (gdf[col] < up_qtl) & (gdf[col] > low_qtl), f'{col}_qtl'] = l
+        #         else:
+        #             gdf.loc[:, f'{col}_qtl'] = 1
 
-        for col in fsr_cols:
-            for l in range(1, 6):
-                if l > 1:
-                    low_qtl = gdf[col].quantile(1 / l)
-                    up_qtl = gdf[col].quantile(1 / (l - 1))
-                    gdf.loc[
-                        (gdf[col] < up_qtl) & (gdf[col] > low_qtl), f'{col}_qtl'] = l
-                else:
-                    gdf.loc[:, f'{col}_qtl'] = 1
+        fsr_cols = ['rad']
+        for col in fsr_cols:  # + [f'{col}_qtl' for col in fsr_cols]:
+            gdf.loc[:, [col]] = gdf.loc[:, [col]].replace(np.inf, 0)
+            self.parcels.gdf.loc[:, [f'fsr_{col}']] = scaler.fit_transform(gdf.loc[:, [col]])
+            self.parcels.gdf.loc[:, [f'fsrScaled_{col}']] = scaler01.fit_transform(gdf.loc[:, [col]]).round(4)
 
-        for col in fsr_cols + [f'{col}_qtl' for col in fsr_cols]:
-
-            try:
-                gdf.loc[:, [col]] = gdf.loc[:, [col]].replace(np.inf, 0)
-                self.parcels.gdf.loc[:, [f'fsr_{col}']] = scaler.fit_transform(gdf.loc[:, [col]])
-                self.parcels.gdf.loc[:, [f'fsrScaled_{col}']] = scaler01.fit_transform(gdf.loc[:, [col]]).round(4)
-            except:
-                pass
+        print(f"> Gradient FSR assigned in {round((time.time() - start_time) / 60, 2)} minutes")
         return
 
     def check_id(self, layer='parcels'):
@@ -975,7 +1004,7 @@ class Neighbourhood:
         pcl = self.parcels.gdf.copy()
         bld = self.buildings.get_gfa().copy()
 
-        pcl['fsr'] = Analyst(pcl).spatial_join(bld.loc[:, ['gfa', 'geometry']])['gfa_mean']/pcl.area
+        pcl['fsr'] = SpatialAnalyst(pcl).spatial_join(bld.loc[:, ['gfa', 'geometry']])['gfa_mean'] / pcl.area
         return pcl
 
     def export(self, driver, crs, suffix=''):

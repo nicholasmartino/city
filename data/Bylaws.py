@@ -90,7 +90,7 @@ class Bylaws:
         return
 
     def boundaries(self):
-        # Access City of Vancouver web page to load the GeoDataFrame
+        # Access Metro Vancouver Regional District web page to load the GeoDataFrame
         zoning_gdf = self.gdf
 
         # Generate unique id for each feature

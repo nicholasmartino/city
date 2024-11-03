@@ -11,7 +11,7 @@ import pydeck as pdk
 import time
 
 sys.path.insert(0, "/Users/nicholasmartino/Google Drive/Python/morphology")
-from ShapeTools import Shape, Analyst, divide_line_by_count, get_point
+from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count, get_point
 from Fabric import Blocks, Parcels, Development
 from Network import Streets
 from shapely.affinity import scale
@@ -393,8 +393,8 @@ class Zone:
 class DevelopmentZone(Zone):
     def __init__(self, zone, types, unit_mix, unit_count, bldg_form, development=None, units=None, whole_block=False,
                  tower_area=None, tower=None, podium=None, blocks=None, r_seed=0):
-        Zone.__init__(self, zone.name, zone.envelopes, zone.fsr, frontage=zone.frontage, neighborhood=zone.neigh,
-                      r_seed=zone.r_seed, directory=zone.dir[:-len(zone.name) - 6], crs=zone.crs, export=zone.export,
+        Zone.__init__(self, zone.city, zone.envelopes, zone.fsr, frontage=zone.frontage, neighborhood=zone.neigh,
+                      r_seed=zone.r_seed, directory=zone.dir[:-len(zone.city) - 6], crs=zone.crs, export=zone.export,
                       max_coverage=zone.max_coverage)
         self.development = development
         self.zone = zone
@@ -544,7 +544,7 @@ class DevelopmentZone(Zone):
         units['area'] = units.area
         blocks['area'] = blocks.area
 
-        blocks = Analyst(blocks, units.loc[:, ['area', 'geometry']]).spatial_join(operations=['sum'])
+        blocks = SpatialAnalyst(blocks, units.loc[:, ['area', 'geometry']]).spatial_join(operations=['sum'])
 
         blocks['new_fsr'] = blocks['area_sum'] / blocks['area']
         return blocks
