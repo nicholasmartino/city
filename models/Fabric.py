@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import pydeck as pdk
 from Network import Streets
-# from Patterns import Skeleton
-from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count
+from ..shapeutils.Patterns import Skeleton
+from ..shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count
 from shapely import ops
 from shapely.geometry import Point, Polygon, MultiLineString
 from sklearn.preprocessing import MinMaxScaler

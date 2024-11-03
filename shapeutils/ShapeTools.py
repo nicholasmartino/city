@@ -1,19 +1,15 @@
 import itertools
-import gc
-import itertools
 import math
-import sys
 import time
-from shapeutils.Patterns import Skeleton
+from Patterns import Skeleton
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from shapely.affinity import scale, translate
 from shapely.geometry import Point, Polygon, LineString, MultiPoint, MultiLineString, MultiPolygon
 from shapely.ops import split, unary_union, nearest_points, linemerge, snap
 from tqdm import tqdm
-import matplotlib
+from models.Network import get_connectivity
 
 
 def azimuth(ln):

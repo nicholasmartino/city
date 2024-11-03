@@ -1,16 +1,10 @@
 import os
-
-import matplotlib
-
-import sys
-import math
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pydeck as pdk
 import time
 
-sys.path.insert(0, "/Users/nicholasmartino/Google Drive/Python/morphology")
 from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count, get_point
 from Fabric import Blocks, Parcels, Development
 from Network import Streets
@@ -551,7 +545,7 @@ class DevelopmentZone(Zone):
 
     def get_building_depths(self):
         """
-        Calculate building depths to maximize fsr considering parcel width, building height and setbacks 
+        Calculate building depths to maximize fsr considering parcel width, building height and setbacks
 
         :return:
         """

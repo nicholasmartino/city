@@ -4,7 +4,6 @@ import time
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from scipy.spatial import Voronoi
 from shapely import ops
 from shapely.geometry import Point, LineString, Polygon
 from tqdm import tqdm
