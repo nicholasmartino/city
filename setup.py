@@ -2,10 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='city',
-    version='0.1.0.dev0',
+    version='0.1.dev0',
     package_dir={"": "src"},
-    packages=find_packages("src"),
-    package_data={"city": ["py.typed"]},
+    packages=find_packages(where="src"),
     include_package_data=True,
     install_requires=[
         requirement.strip() for requirement in open('requirements.txt').readlines()
