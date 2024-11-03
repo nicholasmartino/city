@@ -6,33 +6,6 @@ from shapely.geometry import Point, LineString
 from shapely.ops import snap
 
 
-def get_connectivity(gdf):
-	gdf['id'] = gdf.index
-
-	connectivity = []
-	idx = index.Index()
-
-	# Populate R-tree index with bounds of grid cells
-	for pos, cell in enumerate(gdf.geometry):
-		# assuming cell is a shapely object
-		idx.insert(pos, cell.bounds)
-
-	for i, pol in enumerate(gdf.geometry):
-
-		# Merge cells that have overlapping bounding boxes
-		potential_conn = [gdf.id[pos] for pos in idx.intersection(pol.bounds)]
-
-		# Now do actual intersection
-		conn = []
-		for j in potential_conn:
-			if gdf.loc[j, 'geometry'].intersects(pol):
-				conn.append(j)
-		connectivity.append(len(conn))
-
-	gdf['connectivity'] = connectivity
-	return gdf
-
-
 class Streets:
 	def __init__(self, gdf, buildings=None, crs=26910, widths=None, trees=None, intersections=None, verbose=False):
 		self.gdf = gdf.to_crs(crs)

@@ -1,5 +1,5 @@
 import sys
-from models.Zoning import Zone, Envelope, Box, Trapeze
+from src.Zoning import Zone, Envelope, Box, Trapeze
 
 
 if 'win32' in sys.platform:

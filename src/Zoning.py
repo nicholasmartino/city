@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pydeck as pdk
 import time
-
 from shapeutils.ShapeTools import Shape, SpatialAnalyst, divide_line_by_count, get_point
 from Fabric import Blocks, Parcels, Development
 from Network import Streets

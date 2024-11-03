@@ -1,7 +1,6 @@
 import itertools
 import math
 import time
-from Patterns import Skeleton
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -9,7 +8,8 @@ from shapely.affinity import scale, translate
 from shapely.geometry import Point, Polygon, LineString, MultiPoint, MultiLineString, MultiPolygon
 from shapely.ops import split, unary_union, nearest_points, linemerge, snap
 from tqdm import tqdm
-from models.Network import get_connectivity
+from rtree import index
+from patterns.Patterns import Skeleton
 
 
 def azimuth(ln):
@@ -46,6 +46,33 @@ def relative_max_min(df):
 	df['Y_y'] = (df['maxY'] - df['minY']) / df.length
 
 	return df
+
+
+def get_connectivity(gdf):
+	gdf['id'] = gdf.index
+
+	connectivity = []
+	idx = index.Index()
+
+	# Populate R-tree index with bounds of grid cells
+	for pos, cell in enumerate(gdf.geometry):
+		# assuming cell is a shapely object
+		idx.insert(pos, cell.bounds)
+
+	for i, pol in enumerate(gdf.geometry):
+
+		# Merge cells that have overlapping bounding boxes
+		potential_conn = [gdf.id[pos] for pos in idx.intersection(pol.bounds)]
+
+		# Now do actual intersection
+		conn = []
+		for j in potential_conn:
+			if gdf.loc[j, 'geometry'].intersects(pol):
+				conn.append(j)
+		connectivity.append(len(conn))
+
+	gdf['connectivity'] = connectivity
+	return gdf
 
 
 def get_geom_types(gdf):

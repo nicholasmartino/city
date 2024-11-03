@@ -5,13 +5,8 @@ setup(
     version='0.1',
     packages=find_packages(),
     install_requires=[
-        # Add your project's dependencies here
+        requirement.strip() for requirement in open('requirements.txt').readlines()
     ],
-    entry_points={
-        'console_scripts': [
-            # Add command line scripts here
-        ],
-    },
     author='Nicholas Martino',
     author_email='nicholas.martino@hotmail.com',
     description='Object model for urban elements',
