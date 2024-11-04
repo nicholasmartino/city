@@ -1,10 +1,10 @@
 import geopandas as gpd
 import pandana as pdna
 import pandas as pd
+from shapely.ops import snap
 from rtree import index
 from shapely.geometry import Point, LineString
 from sklearn.mixture import GaussianMixture
-from shapely.ops import snap
 
 class Streets:
 	def __init__(self, gdf, buildings=None, crs=26910, widths=None, trees=None, intersections=None, verbose=False):
