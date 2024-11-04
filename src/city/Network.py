@@ -3,6 +3,7 @@ import pandana as pdna
 import pandas as pd
 from rtree import index
 from shapely.geometry import Point, LineString
+from sklearn.mixture import GaussianMixture
 from shapely.ops import snap
 
 class Streets:
